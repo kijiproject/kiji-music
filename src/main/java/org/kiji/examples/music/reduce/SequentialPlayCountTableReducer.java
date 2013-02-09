@@ -21,10 +21,15 @@ package org.kiji.examples.music.reduce;
 
 import java.io.IOException;
 
+import org.apache.avro.Schema;
+import org.apache.avro.mapred.AvroKey;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 
 import org.kiji.common.flags.Flag;
+import org.kiji.examples.music.NextSongCount;
+import org.kiji.examples.music.SongBiGram;
+import org.kiji.mapreduce.AvroKeyReader;
 import org.kiji.mapreduce.KijiTableContext;
 import org.kiji.mapreduce.KijiTableReducer;
 
@@ -32,18 +37,13 @@ import org.kiji.mapreduce.KijiTableReducer;
  * A reducer that will sum the values associated with a key and write that sum
  * to a column specified via command line flags.
  */
-public class TotalCountTableReducer extends KijiTableReducer<Text, LongWritable> {
-  // For our music project, we are writing to column family "derived".
-  @Flag(name="column-family", usage="Specify the column family to write to.")
-  public String mColumnFamily;
-
-  // For our music project, we are writing to column qualifier "number_of_plays".
-  @Flag(name="column-qualifier", usage="Specify the column qualifier to write to.")
-  public String mColumnQualifier;
+public class SequentialPlayCountTableReducer
+    extends KijiTableReducer<AvroKey<SongBiGram>, LongWritable>
+    implements AvroKeyReader {
 
   /** {@inheritDoc} */
   @Override
-  protected void reduce(Text key, Iterable<LongWritable> values, KijiTableContext context)
+  protected void reduce(AvroKey<SongBiGram> key, Iterable<LongWritable> values, KijiTableContext context)
       throws IOException {
     // Initialize sum to zero.
     long sum = 0L;
@@ -51,7 +51,19 @@ public class TotalCountTableReducer extends KijiTableReducer<Text, LongWritable>
     for (LongWritable value : values) {
       sum += value.get();
     }
+    // Set values for this count.
+    NextSongCount nextCount = new NextSongCount();
+    nextCount.setCount(sum);
+    SongBiGram songPair = key.datum();
+    nextCount.setSongId(songPair.getSecondSongPlayed());
     // Write out result for this song
-    context.put(context.getEntityId(key.toString()), mColumnFamily, mColumnQualifier, values);
+    context.put(context.getEntityId(songPair.getFirstSongPlayed().toString()), "info" , "next_songs",
+        nextCount);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public Schema getAvroKeyReaderSchema() throws IOException {
+    return SongBiGram.SCHEMA$;
   }
 }
