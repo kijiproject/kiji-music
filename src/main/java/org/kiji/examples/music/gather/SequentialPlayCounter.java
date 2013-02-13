@@ -38,7 +38,7 @@ import org.kiji.schema.KijiRowData;
 /**
  *
  */
-public class SequentialSongPlayCounter extends KijiGatherer<AvroKey<SongBiGram>, LongWritable>
+public class SequentialPlayCounter extends KijiGatherer<AvroKey<SongBiGram>, LongWritable>
   implements AvroKeyWriter {
   /** Only keep one LongWritable object around to reduce the chance of a garbage collection pause.*/
   private static final LongWritable ONE = new LongWritable(1);

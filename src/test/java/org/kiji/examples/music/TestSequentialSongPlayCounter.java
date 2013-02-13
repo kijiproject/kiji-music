@@ -13,8 +13,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.kiji.examples.music.gather.SequentialSongPlayCounter;
-import org.kiji.examples.music.reduce.SequentialPlayCountTableReducer;
+import org.kiji.examples.music.gather.SequentialPlayCounter;
+import org.kiji.examples.music.reduce.SequentialPlayCountReducer;
 import org.kiji.mapreduce.KijiGatherJobBuilder;
 import org.kiji.mapreduce.MapReduceJob;
 import org.kiji.mapreduce.MapReduceJobOutput;
@@ -28,7 +28,7 @@ import org.kiji.schema.KijiURI;
 import org.kiji.schema.layout.KijiTableLayout;
 import org.kiji.schema.util.InstanceBuilder;
 
-/** Test for SequentialSongPlayCounter. */
+/** Test for SequentialPlayCounter. */
 public class TestSequentialSongPlayCounter extends KijiClientTest {
    private static final Logger LOG = LoggerFactory.getLogger(TestSongPlayCounter.class);
 
@@ -79,8 +79,8 @@ public class TestSequentialSongPlayCounter extends KijiClientTest {
 
     final MapReduceJob mrjob = KijiGatherJobBuilder.create()
         .withConf(getConf())
-        .withGatherer(SequentialSongPlayCounter.class)
-        .withReducer(SequentialPlayCountTableReducer.class)
+        .withGatherer(SequentialPlayCounter.class)
+        .withReducer(SequentialPlayCountReducer.class)
         .withInputTable(mUserTableURI)
         // Note: the local map/reduce job runner does not allow more than one reducer:
         .withOutput(tableOutput)

@@ -23,28 +23,28 @@ import java.io.IOException;
 
 import org.apache.avro.Schema;
 import org.apache.avro.mapred.AvroKey;
+import org.apache.avro.mapred.AvroValue;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 
-import org.kiji.common.flags.Flag;
-import org.kiji.examples.music.NextSongCount;
+import org.kiji.examples.music.SongCount;
 import org.kiji.examples.music.SongBiGram;
 import org.kiji.mapreduce.AvroKeyReader;
-import org.kiji.mapreduce.KijiTableContext;
-import org.kiji.mapreduce.KijiTableReducer;
+import org.kiji.mapreduce.AvroValueWriter;
+import org.kiji.mapreduce.KijiReducer;
 
 /**
- * A reducer that will sum the values associated with a key and write that sum
- * to a column specified via command line flags.
+ * A reducer that will sum the values associated with a pair of songs and write that sum
+ * to a column specified
  */
-public class SequentialPlayCountTableReducer
-    extends KijiTableReducer<AvroKey<SongBiGram>, LongWritable>
-    implements AvroKeyReader {
+public class SequentialPlayCountReducer
+    extends KijiReducer<AvroKey<SongBiGram>, LongWritable, Text, AvroValue<SongCount>>
+    implements AvroKeyReader, AvroValueWriter {
 
   /** {@inheritDoc} */
   @Override
-  protected void reduce(AvroKey<SongBiGram> key, Iterable<LongWritable> values, KijiTableContext context)
-      throws IOException {
+  protected void reduce(AvroKey<SongBiGram> key, Iterable<LongWritable> values, Context context)
+      throws IOException, InterruptedException {
     // Initialize sum to zero.
     long sum = 0L;
     // Add up all the values.
@@ -52,18 +52,32 @@ public class SequentialPlayCountTableReducer
       sum += value.get();
     }
     // Set values for this count.
-    NextSongCount nextCount = new NextSongCount();
-    nextCount.setCount(sum);
+    SongCount nextSongCount = new SongCount();
+    nextSongCount.setCount(sum);
     SongBiGram songPair = key.datum();
-    nextCount.setSongId(songPair.getSecondSongPlayed());
+    nextSongCount.setSongId(songPair.getSecondSongPlayed());
     // Write out result for this song
-    context.put(context.getEntityId(songPair.getFirstSongPlayed().toString()), "info" , "next_songs",
-        nextCount);
+    context.write(new Text(songPair.getFirstSongPlayed().toString()), new AvroValue(nextSongCount));
   }
 
   /** {@inheritDoc} */
   @Override
   public Schema getAvroKeyReaderSchema() throws IOException {
     return SongBiGram.SCHEMA$;
+  }
+
+  @Override
+  public Class<?> getOutputKeyClass() {
+    return Text.class;
+  }
+
+  @Override
+  public Class<?> getOutputValueClass() {
+    return AvroValue.class;
+  }
+
+  @Override
+  public Schema getAvroValueWriterSchema() throws IOException {
+    return SongCount.SCHEMA$;
   }
 }
