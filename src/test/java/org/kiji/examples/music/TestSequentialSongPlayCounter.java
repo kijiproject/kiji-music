@@ -6,7 +6,22 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.util.Map;
 
+import com.google.common.collect.Maps;
+import org.apache.avro.file.DataFileReader;
+import org.apache.avro.file.FileReader;
+import org.apache.avro.file.SeekableInput;
+import org.apache.avro.generic.GenericDatumReader;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.DatumReader;
+import org.apache.avro.mapred.AvroKey;
+import org.apache.avro.mapred.AvroValue;
+import org.apache.avro.mapred.FsInput;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,7 +33,9 @@ import org.kiji.examples.music.reduce.SequentialPlayCountReducer;
 import org.kiji.mapreduce.KijiGatherJobBuilder;
 import org.kiji.mapreduce.MapReduceJob;
 import org.kiji.mapreduce.MapReduceJobOutput;
+import org.kiji.mapreduce.output.AvroKeyValueMapReduceJobOutput;
 import org.kiji.mapreduce.output.DirectKijiTableMapReduceJobOutput;
+import org.kiji.mapreduce.output.SequenceFileMapReduceJobOutput;
 import org.kiji.schema.KijiClientTest;
 import org.kiji.schema.KijiDataRequest;
 import org.kiji.schema.KijiDataRequestBuilder;
@@ -33,9 +50,6 @@ public class TestSequentialSongPlayCounter extends KijiClientTest {
    private static final Logger LOG = LoggerFactory.getLogger(TestSongPlayCounter.class);
 
   private KijiURI mUserTableURI;
-  private KijiURI mSongTableURI;
-  private KijiTable mSongTable;
-  private KijiTableReader mSongTableReader;
 
   @Before
   public final void setup() throws Exception {
@@ -43,10 +57,6 @@ public class TestSequentialSongPlayCounter extends KijiClientTest {
         KijiTableLayout.createFromEffectiveJsonResource("/layout/users.json");
     final String userTableName = userLayout.getName();
     mUserTableURI = KijiURI.newBuilder(getKiji().getURI()).withTableName(userTableName).build();
-    final KijiTableLayout songLayout =
-        KijiTableLayout.createFromEffectiveJsonResource("/layout/songs.json");
-    final String songTableName = songLayout.getName();
-    mSongTableURI = KijiURI.newBuilder(getKiji().getURI()).withTableName(songTableName).build();
 
 
     new InstanceBuilder(getKiji())
@@ -60,22 +70,12 @@ public class TestSequentialSongPlayCounter extends KijiClientTest {
                 .withValue(4L, "song-1")
             .withRow("user-3").withFamily("info").withQualifier("track_plays")
                 .withValue(1L, "song-5")
-        .withTable(songLayout.getName(),songLayout)
         .build();
-    mSongTable = getKiji().openTable(songTableName);
-    mSongTableReader = mSongTable.openTableReader();
-  }
-
-  @After
-  public final void teardown() throws Exception {
-    mSongTableReader.close();
-    mSongTable.close();
   }
 
   @Test
   public void testSongPlayCounter() throws Exception {
     final File outputDir = new File(getLocalTempDir(), "output.sequence_file");
-    MapReduceJobOutput tableOutput = new DirectKijiTableMapReduceJobOutput(mSongTableURI, 1);
 
     final MapReduceJob mrjob = KijiGatherJobBuilder.create()
         .withConf(getConf())
@@ -83,23 +83,33 @@ public class TestSequentialSongPlayCounter extends KijiClientTest {
         .withReducer(SequentialPlayCountReducer.class)
         .withInputTable(mUserTableURI)
         // Note: the local map/reduce job runner does not allow more than one reducer:
-        .withOutput(tableOutput)
+        .withOutput(new AvroKeyValueMapReduceJobOutput(new Path("file://" + outputDir), 1))
         .build();
     assertTrue(mrjob.run());
-    KijiDataRequestBuilder builder = KijiDataRequest.builder();
-    builder.addColumns().withMaxVersions(Integer.MAX_VALUE).add("info", "next_songs");
-    KijiDataRequest request = builder.build();
-    NextSongCount valueForSong1 = mSongTableReader
-      .get(mSongTable.getEntityId("song-1"), request).getMostRecentValue("info", "next_songs");
-    assertEquals("Unexpected song played after song-1: ","song-2", valueForSong1.getSongId()
-        .toString());
-    assertEquals("Unexpected number of plays for song-2 after song-1: ", 2,
-        valueForSong1.getCount().intValue());
-    NextSongCount valueForSong2 = mSongTableReader
-      .get(mSongTable.getEntityId("song-2"), request).getMostRecentValue("info", "next_songs");
-    assertEquals("Unexpected song played after song-2: ","song-3", valueForSong2.getSongId()
-        .toString());
-    assertEquals("Unexpected number of plays for song-2 after song-1: ", 1,
-        valueForSong2.getCount().intValue());
+
+    final Map<String, SongCount> counts = Maps.newTreeMap();
+    readAvroKVFile(new File(outputDir, "part-r-00000"), counts);
+    LOG.info("Counts map: {}", counts);
+    assertEquals(2, counts.size());
+  }
+
+   /**
+   * Reads a sequence file of (song ID, # of song plays) into a map.
+   *
+   * @param path Path of the sequence file to read.
+   * @param map Map to fill in with (song ID, # of song plays) entries.
+   * @throws Exception on I/O error.
+   */
+  private void readAvroKVFile(File file, Map<String, SongCount> map) throws Exception {
+    Path path = new Path("file://" + file.toString());
+    SeekableInput input = new FsInput(path, getConf());
+    DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>();
+    FileReader<GenericRecord> fileReader = DataFileReader.openReader(input, reader);
+
+    for (GenericRecord kvPairs : fileReader) {
+      String song = (String) kvPairs.get("key");
+      LOG.info("the class of knPairs.get(value) is :" + kvPairs.get("value").getClass().toString());
+    }
+    fileReader.close();
   }
 }

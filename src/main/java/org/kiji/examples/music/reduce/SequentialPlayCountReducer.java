@@ -30,6 +30,7 @@ import org.apache.hadoop.io.Text;
 import org.kiji.examples.music.SongCount;
 import org.kiji.examples.music.SongBiGram;
 import org.kiji.mapreduce.AvroKeyReader;
+import org.kiji.mapreduce.AvroKeyWriter;
 import org.kiji.mapreduce.AvroValueWriter;
 import org.kiji.mapreduce.KijiReducer;
 
@@ -38,8 +39,8 @@ import org.kiji.mapreduce.KijiReducer;
  * to a column specified
  */
 public class SequentialPlayCountReducer
-    extends KijiReducer<AvroKey<SongBiGram>, LongWritable, Text, AvroValue<SongCount>>
-    implements AvroKeyReader, AvroValueWriter {
+    extends KijiReducer<AvroKey<SongBiGram>, LongWritable, AvroKey<CharSequence>, AvroValue<SongCount>>
+    implements AvroKeyReader, AvroKeyWriter, AvroValueWriter {
 
   /** {@inheritDoc} */
   @Override
@@ -57,7 +58,7 @@ public class SequentialPlayCountReducer
     SongBiGram songPair = key.datum();
     nextSongCount.setSongId(songPair.getSecondSongPlayed());
     // Write out result for this song
-    context.write(new Text(songPair.getFirstSongPlayed().toString()), new AvroValue(nextSongCount));
+    context.write(new AvroKey(songPair.getFirstSongPlayed().toString()), new AvroValue(nextSongCount));
   }
 
   /** {@inheritDoc} */
@@ -68,7 +69,7 @@ public class SequentialPlayCountReducer
 
   @Override
   public Class<?> getOutputKeyClass() {
-    return Text.class;
+    return AvroKey.class;
   }
 
   @Override
@@ -79,5 +80,11 @@ public class SequentialPlayCountReducer
   @Override
   public Schema getAvroValueWriterSchema() throws IOException {
     return SongCount.SCHEMA$;
+  }
+
+  @Override
+  public Schema getAvroKeyWriterSchema() throws IOException {
+    // Programmaticlly retrieve the avro schema for a String.
+    return Schema.create(Schema.Type.STRING);
   }
 }

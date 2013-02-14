@@ -60,19 +60,23 @@ public class NextSongRecommender extends KijiProducer implements KeyValueStoreCl
 
   @Override
   public void produce(KijiRowData input, ProducerContext context) throws IOException {
-    KeyValueStoreReader<String, List<SongCount>> topNextSongsReader = null;
+    // Open the key value store reader
+    KeyValueStoreReader<String, TopSongs> topNextSongsReader = null;
     try {
-      topNextSongsReader = context.getStore("name");
+      topNextSongsReader = context.getStore("nextPlayed");
     } catch (InterruptedException ex) {
+      // It is pointless to continue if we can't open the key value store.
       throw new RuntimeException(ex);
     }
-    topNextSongsReader.get(input.<String>getMostRecentValue("info", "track_plays"));
+    // Get the songs likely to be played next.
+    TopSongs topSongs = topNextSongsReader.get(input
+        .<String>getMostRecentValue("info", "track_plays"));
   }
 
   @Override
   public Map<String, KeyValueStore<?, ?>> getRequiredStores() {
     KijiTableKeyValueStore.Builder kvStoreBuilder = KijiTableKeyValueStore.builder();
-    //Our default implementation will use the default kiji instance, and a table named songs.
+    // Our default implementation will use the default kiji instance, and a table named songs.
     KijiURI tableURI;
     try {
       tableURI = KijiURI.newBuilder().withTableName("songs").build();
@@ -80,7 +84,7 @@ public class NextSongRecommender extends KijiProducer implements KeyValueStoreCl
       throw new RuntimeException(ex);
     }
     kvStoreBuilder.withColumn("info", "top_next_songs").withTable(tableURI);
-    return RequiredStores.just("name", kvStoreBuilder.build());
+    return RequiredStores.just("nextPlayed", kvStoreBuilder.build());
   }
 
 }
