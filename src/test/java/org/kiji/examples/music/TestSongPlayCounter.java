@@ -52,6 +52,7 @@ public class TestSongPlayCounter extends KijiClientTest {
   private KijiURI mTableURI;
 
   @Before
+  /** Initialize our environment. */
   public final void setup() throws Exception {
     final KijiTableLayout layout =
         KijiTableLayout.createFromEffectiveJsonResource("/layout/users.json");
@@ -75,6 +76,7 @@ public class TestSongPlayCounter extends KijiClientTest {
   }
 
   @Test
+  /* Test our play count computes the expected results. */
   public void testSongPlayCounter() throws Exception {
     final File outputDir = new File(getLocalTempDir(), "output.sequence_file");
     final MapReduceJob mrjob = KijiGatherJobBuilder.create()
