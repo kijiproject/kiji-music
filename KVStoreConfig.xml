@@ -4,8 +4,8 @@
     <configuration>
       <property>
         <name>table.uri</name>
-        <!-- ${KIJI} should be replaced with the URI of the songs table to use. -->
-        <value>${KIJI}/songs</value> <!-- The default URI would be kiji://.env/default/songs -->
+        <!--This URI can be replaced with the URI of a different 'songs' table to use. -->
+        <value>kiji://.env/default/songs</value> <!-- The default URI -->
       </property>
       <property>
         <name>column</name>
