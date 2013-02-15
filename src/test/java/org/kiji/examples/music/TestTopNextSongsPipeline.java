@@ -46,6 +46,7 @@ import org.kiji.mapreduce.output.DirectKijiTableMapReduceJobOutput;
 import org.kiji.schema.KijiClientTest;
 import org.kiji.schema.KijiDataRequest;
 import org.kiji.schema.KijiDataRequestBuilder;
+import org.kiji.schema.KijiDataRequestBuilder.ColumnsDef;
 import org.kiji.schema.KijiTable;
 import org.kiji.schema.KijiTableReader;
 import org.kiji.schema.KijiURI;
@@ -152,7 +153,10 @@ public class TestTopNextSongsPipeline extends KijiClientTest {
     assertTrue(mrjob2.run());
 
     KijiDataRequestBuilder builder = KijiDataRequest.builder();
-    builder.addColumns().withMaxVersions(Integer.MAX_VALUE).add("info", "next_songs");
+    builder.addColumns(ColumnsDef.create()
+      .withMaxVersions(Integer.MAX_VALUE)
+      .add("info", "next_songs"));
+
     KijiDataRequest request = builder.build();
 
     TopSongs valuesForSong1 = mSongTableReader.get(mSongTable.getEntityId("song-1"), request)
