@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <stores>
-  <store name="nextPlayed" class="org.kiji.examples.music.NextSongRecommender">
+  <store name="nextPlayed" class="org.kiji.mapreduce.kvstore.lib.KijiTableKeyValueStore">
     <configuration>
       <property>
         <name>table.uri</name>
-        <value>${KIJI}/songs</value>
+        <!-- ${KIJI} should be replaced with the URI of the songs table to use. -->
+        <value>${KIJI}/songs</value> <!-- The default URI would be kiji://.env/default/songs -->
       </property>
       <property>
         <name>column</name>
