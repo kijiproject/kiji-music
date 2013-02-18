@@ -30,11 +30,14 @@ import org.kiji.mapreduce.kvstore.KeyValueStore;
 import org.kiji.mapreduce.kvstore.KeyValueStoreClient;
 import org.kiji.mapreduce.kvstore.KeyValueStoreReader;
 import org.kiji.mapreduce.kvstore.RequiredStores;
+import org.kiji.mapreduce.kvstore.lib.KijiTableKeyValueStore;
 import org.kiji.mapreduce.kvstore.lib.UnconfiguredKeyValueStore;
 import org.kiji.mapreduce.produce.KijiProducer;
 import org.kiji.mapreduce.produce.ProducerContext;
 import org.kiji.schema.KijiDataRequest;
 import org.kiji.schema.KijiRowData;
+import org.kiji.schema.KijiURI;
+import org.kiji.schema.KijiURIException;
 
 /**
  * Producer generating recommendations for the next songs each user might like.
@@ -79,7 +82,7 @@ public class NextSongRecommender extends KijiProducer implements KeyValueStoreCl
   /** {@inheritDoc} */
   @Override
   public Map<String, KeyValueStore<?, ?>> getRequiredStores() {
-    /** KijiTableKeyValueStore.Builder kvStoreBuilder = KijiTableKeyValueStore.builder();
+    KijiTableKeyValueStore.Builder kvStoreBuilder = KijiTableKeyValueStore.builder();
     // Our default implementation will use the default kiji instance, and a table named songs.
     KijiURI tableURI;
     try { //TODO: figure out a reasonable default
@@ -87,9 +90,8 @@ public class NextSongRecommender extends KijiProducer implements KeyValueStoreCl
     } catch (KijiURIException ex) {
       throw new RuntimeException(ex);
     }
-    kvStoreBuilder.withColumn("info", "top_next_songs").withTable(tableURI); */
-    // return RequiredStores.just("nextPlayed", kvStoreBuilder.build());
-    return RequiredStores.just("nextPlayed", UnconfiguredKeyValueStore.builder().build());
+    kvStoreBuilder.withColumn("info", "top_next_songs").withTable(tableURI);
+     return RequiredStores.just("nextPlayed", kvStoreBuilder.build());
   }
 
   /**
