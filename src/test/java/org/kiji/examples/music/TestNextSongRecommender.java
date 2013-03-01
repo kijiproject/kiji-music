@@ -105,10 +105,10 @@ public class TestNextSongRecommender extends KijiClientTest {
 
   /**  Close resources we open for the test. */
   @After
-  public final void cleanup() {
+  public final void cleanup() throws IOException {
     // Close table and table reader in the reverse order.
-    ResourceUtils.closeOrLog(mUserTableReader);
-    ResourceUtils.releaseOrLog(mUserTable);
+    ResourceUtils.closeIfNotNull(mUserTableReader);
+    ResourceUtils.releaseIfNotNull(mUserTable);
   }
 
   @Test
