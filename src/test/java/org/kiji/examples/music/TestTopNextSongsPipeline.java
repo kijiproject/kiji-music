@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
 import org.junit.After;
@@ -111,10 +112,10 @@ public class TestTopNextSongsPipeline extends KijiClientTest {
 
   /**  Close resources we open for the test. */
   @After
-  public final void cleanup() {
+  public final void cleanup() throws IOException {
     // Close table and table reader in the reverse order.
-    ResourceUtils.closeOrLog(mSongTableReader);
-    ResourceUtils.releaseOrLog(mSongTable);
+    ResourceUtils.closeIfNotNull(mSongTableReader);
+    ResourceUtils.releaseIfNotNull(mSongTable);
   }
 
 
